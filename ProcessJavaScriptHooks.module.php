@@ -7,7 +7,7 @@ namespace ProcessWire;
  * @license Licensed under MIT
  * @link https://www.baumrock.com
  */
-class ProcessJavaScriptHooks extends Process
+class ProcessJavaScriptHooks extends Process implements ConfigurableModule
 {
   public function execute()
   {
@@ -32,9 +32,58 @@ class ProcessJavaScriptHooks extends Process
         'icon' => 'code',
         'value' => $this->renderExample($file),
       ]);
+      $form->add([
+        'type' => 'markup',
+        'label' => 'Nav',
+        'icon' => 'code',
+        'value' => $this->renderBottomNav(),
+      ]);
     }
 
     return $form->render();
+  }
+
+  private function getFiles(): array
+  {
+    $files = glob(__DIR__ . '/examples/*.php');
+    $files = array_filter($files, function ($file) {
+      if (basename($file) == 'assets.php') return false;
+      return true;
+    });
+    $files = array_map(function ($file) {
+      return basename($file, '.php');
+    }, $files);
+    return $files;
+  }
+
+  private function nextFile(string $file): string
+  {
+    $files = $this->getFiles();
+    $index = array_search($file, $files);
+    if ($index === false || $index === count($files) - 1) return '';
+    return $files[$index + 1];
+  }
+
+  private function previousFile(string $file): string
+  {
+    $files = $this->getFiles();
+    $index = array_search($file, $files);
+    if ($index === false || $index === 0) return '';
+    return $files[$index - 1];
+  }
+
+  private function renderBottomNav(): string
+  {
+    $file = wire()->input->get('file', 'string');
+    $next = $this->nextFile($file);
+    $previous = $this->previousFile($file);
+    $out = '<div class="uk-flex uk-flex-between">';
+    if ($previous) $out .= "<div><a href='?file={$previous}'><< {$previous}</a></div>";
+    else $out .= '<div></div>';
+    if ($next) $out .= "<div><a href='?file={$next}'>{$next} >></a></div>";
+    else $out .= '<div></div>';
+    $out .= '</div>';
+    return $out;
   }
 
   private function renderExample(string $file): string
@@ -45,16 +94,27 @@ class ProcessJavaScriptHooks extends Process
 
   private function renderNav(): string
   {
-    $files = glob(__DIR__ . '/examples/*.php');
+    $files = $this->getFiles();
     $table = '<table class="uk-table uk-table-striped uk-table-small uk-margin-remove">';
     foreach ($files as $file) {
       $base = basename($file, '.php');
-      if ($base == 'assets') continue;
       $table .= '<tr>';
       $table .= '<td><a href="?file=' . $base . '">' . $base . '</a></td>';
       $table .= '</tr>';
     }
     $table .= '</table>';
     return $table;
+  }
+
+  public function getModuleConfigInputfields($inputfields)
+  {
+    $url = wire()->config->urls->admin . 'setup/javascripthooks/';
+    $inputfields->add([
+      'type' => 'markup',
+      'label' => 'Tests/Examples',
+      'value' => "<a href='$url' class='uk-button uk-button-primary'>Open examples</a>",
+      'icon' => 'code',
+    ]);
+    return $inputfields;
   }
 }
