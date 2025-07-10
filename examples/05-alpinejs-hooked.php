@@ -13,16 +13,28 @@
     document.addEventListener('alpine:init', () => {
       Alpine.data('MyCounter', (el) => {
         return ProcessWire.wire({
-          count: 0,
+            count: 0,
 
-          ___increment() {
-            this.count++;
-          },
+            init() {
+              this.$watch('count', this.countChanged);
+            },
 
-          ___decrement() {
-            this.count--;
+            ___increment() {
+              this.count++;
+            },
+
+            ___decrement() {
+              this.count--;
+            },
+
+            countChanged(value) {
+              UIkit.notification(`Count is now ${value}`, 'success');
+            },
           },
-        }, 'MyCounter');
+          // for plain objects we need to define the name of the component
+          // this is what will be used for the hook selector MyCounter::...
+          'MyCounter'
+        );
       })
     })
   </script>
